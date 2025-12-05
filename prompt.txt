@@ -1,0 +1,135 @@
+Ok, hai să stabilim clar ce vreau aici. Trebuie să fac o aplicație web în Python + Django care poate edita PDF-uri la nivel de TEXT, păstrând formatul inițial al documentului (layout, fonturi, poziționare pagini, imagini etc.). Nu vreau varianta în care extragi tot textul într-un textarea și generezi un PDF simplu de la zero. Vreau să modifici direct ce este deja în PDF, cât se poate, cu ajutorul librăriilor Python.
+
+IMPORTANT:
+1. Nu generezi cod până nu îmi arăți un plan clar (Artifact).
+2. În plan trebuie să explici:
+   - ce librărie/librării PDF folosești (ex: PyMuPDF, pikepdf, etc.),
+   - cum faci căutarea și înlocuirea de text,
+   - cum te asiguri că layout-ul este păstrat (sau care sunt limitările).
+3. După ce aprob planul, implementezi pe etape, nu tot grămadă.
+
+## Scopul aplicației
+
+O aplicație Django care:
+- permite upload de fișiere PDF,
+- permite definirea unor reguli simple de tip „găsește textul X și înlocuiește cu Y”,
+- aplică modificarea direct în PDF, păstrând:
+  - paginarea,
+  - pozițiile textului,
+  - fonturile (în limita posibilului),
+  - imaginile și restul conținutului,
+- oferă utilizatorului PDF-ul modificat pentru download.
+
+Nu urmăresc să fie un Adobe Acrobat clone, dar trebuie să fie clar că PDF-ul final arată la fel ca originalul, doar cu textul schimbat acolo unde s-a făcut înlocuirea.
+
+## Functionalități MINIME (obligatorii)
+
+1. **Upload PDF**
+   - O pagină în care utilizatorul poate încărca un PDF.
+   - Validare să fie fișier PDF (extensie + tip de fișier rezonabil).
+
+2. **Formular de editare (Find & Replace)**
+   - După upload, afișezi un formular cu:
+     - câmp „text de căutat”,
+     - câmp „text nou”,
+     - opțiune „case sensitive” (da/nu),
+     - opțional: interval de pagini (ex: „1-3,5”).
+   - Utilizatorul introduce ce vrea să înlocuiască.
+
+3. **Aplicarea modificărilor în PDF**
+   - Folosești o librărie de PDF din Python (ex: PyMuPDF, pikepdf, sau alta rezonabilă) care îți permite să accesezi conținutul text de pe pagini și să-l modifici.
+   - Important:
+     - NU genera un PDF complet nou pornind doar din text brut.
+     - Încearcă să faci efectiv înlocuirea în content stream-ul PDF-ului, astfel încât layout-ul să fie păstrat.
+   - Dacă tehnic nu se poate pentru anumite tipuri de PDF (ex: scanări doar cu imagini sau fonturi foarte ciudate), explici clar limita în plan și în README.
+
+4. **Rezultat & download**
+   - După ce înlocuirea a fost aplicată, salvezi PDF-ul modificat într-o locație temporară.
+   - Afișezi o pagină de rezultat cu:
+     - un mesaj gen „Modificările au fost aplicate (X înlocuiri efectuate)”,
+     - un buton „Descarcă PDF modificat”.
+
+## Abordare tehnică (PDF) – ce aștept de la tine (agent) în plan
+
+În Artifact-ul de plan, trebuie să clarifici:
+
+- Ce librărie folosești pentru:
+  - citirea PDF-ului,
+  - căutarea textului,
+  - modificarea textului,
+  - salvarea PDF-ului modificat.
+- Cum tratezi:
+  - paginile cu text „normal” (selectabil),
+  - cazurile în care textul este împărțit în bucăți (de ex. „ex” + „emplu”),
+  - PDF-uri doar cu imagini (acolo nu vei putea modifica textul, e ok, doar trebuie explicat).
+- Strategia ta trebuie să fie:
+  - păstrezi structura PDF-ului cât mai intactă,
+  - modifici DOAR textul relevant,
+  - nu schimbi fonturi, nu rupi paginile, nu pierzi imagini intenționat.
+
+Este acceptabil să existe niște limitări, DAR:
+- nu ai voie să „simplifici” PDF-ul într-un layout complet diferit doar ca să îți fie ție mai ușor la implementare.
+- dacă pentru anumite PDF-uri metoda de înlocuire e problematică, documentezi clar în README.
+
+## Structura proiectului Django
+
+Vreau o structură simplă, clasică:
+
+- mediu virtual,
+- `requirements.txt` cu librăriile necesare (Django + librăria/librăriile PDF),
+- un proiect Django (ex: `pdf_project`),
+- o aplicație Django (ex: `pdfeditor`),
+- views și templates pentru:
+  - upload,
+  - formularul de find/replace,
+  - rezultat (download),
+- configurare `MEDIA_ROOT` / `MEDIA_URL` pentru fișierele urcate și cele modificate,
+- ștergerea fișierelor temporare după un timp sau după descărcare (explică în plan cum o gestionezi).
+
+## Interfață (UI)
+
+- HTML simplu, fără React, fără framework-uri grele.
+- Formularul de upload + formularul de find/replace trebuie să fie clare:
+  - vezi PDF-ul ales,
+  - introduci textul de căutat și textul nou,
+  - apeși un buton „Aplică modificările”.
+- Nu facem design fancy, dar să nu arate ca un haos complet.
+
+## Teste și calitate
+
+- Scrie cel puțin:
+  - un test pentru upload și procesare basic (ex: un PDF de test mic în care înlocuiești un cuvânt),
+  - un test pentru cazul în care PDF-ul nu are text (ex: doar imagini) și aplicația se comportă decent (mesaj de „nu s-a găsit text de modificat” sau similar).
+- Să pot rula testele cu `python manage.py test`.
+
+## README
+
+Include un `README.md` cu:
+- ce face aplicația,
+- cum o instalez și o pornesc (pași clari),
+- ce limitări are (scanned PDFs, anumite fonturi, etc.),
+- un exemplu simplu de workflow:
+  - urc PDF,
+  - caut „test”,
+  - înlocuiesc cu „exemplu”,
+  - descarc PDF modificat.
+
+## Cum trebuie să lucrezi (agent)
+
+1. Citești acest fișier `prompt.txt`.
+2. Creezi un Artifact cu:
+   - planul complet de implementare,
+   - librăria PDF aleasă și motivul alegerii,
+   - structura proiectului (foldere, fișiere importante),
+   - flow-ul complet pentru utilizator.
+3. Aștepți să îți aprob planul.
+4. După aprobare:
+   - setezi proiectul Django,
+   - implementezi upload-ul,
+   - implementezi logica de find & replace păstrând layout-ul,
+   - implementezi partea de download,
+   - adaugi testele și README-ul.
+5. Nu adaugi funcționalități de gen „split PDF”, „merge PDF” sau altele, decât dacă sunt discutate separat și trecute clar ca opționale. Focusul principal e editarea textului, cu păstrarea formatului.
+6. Dacă ceva în PDF este imposibil de modificat fără să distrugi layout-ul, explici clar în cod/README și te oprești elegant, nu faci improvizații care deformează complet documentul.
+
+Asta e tot. Citește promptul, fă un plan (Artifact) și NU genera cod până nu e aprobat planul.
