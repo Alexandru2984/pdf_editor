@@ -11,7 +11,7 @@ from django.core.files.storage import FileSystemStorage
 from django.contrib import messages
 
 from .forms import FindReplaceForm, SplitPDFForm, MergePDFForm, CompressPDFForm, WatermarkForm, RotatePagesForm, PageNumbersForm
-from .pdf_processor import find_and_replace_text, check_pdf_has_text, split_pdf, merge_pdfs, compress_pdf, add_watermark, rotate_pages, add_page_numbers
+from .pdf_processor import find_and_replace_text, check_pdf_has_text, split_pdf, merge_pdfs, compress_pdf, add_watermark, rotate_pages, add_page_numbers, extract_text_from_pdf, ocr_pdf_to_text
 
 
 def get_uploaded_pdfs(request):
@@ -836,6 +836,91 @@ def download_numbered_view(request):
     except Exception as e:
         messages.error(request, f'Error downloading file: {str(e)}')
         return redirect('dashboard')
+
+
+def more_tools_view(request):
+    """View for More Tools modal with advanced functions."""
+    uploaded_pdfs = get_uploaded_pdfs(request)
+    
+    if not uploaded_pdfs:
+        messages.error(request, 'No PDF found. Please upload a PDF first.')
+        return redirect('dashboard')
+    
+    context = {
+        'uploaded_pdfs': uploaded_pdfs
+    }
+    return render(request, 'pdfeditor/more_tools.html', context)
+
+
+def extract_text_ajax(request, pdf_id):
+    """AJAX endpoint for extracting text from PDF."""
+    from django.http import JsonResponse
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid method'})
+    
+    pdf = get_pdf_by_id(request, pdf_id)
+    if not pdf:
+        return JsonResponse({'success': False, 'error': 'PDF not found'})
+    
+    try:
+        text = extract_text_from_pdf(pdf['path'])
+        
+        # Store in session for download
+        request.session['extracted_text'] = text
+        request.session['extracted_filename'] = pdf['name'].replace('.pdf', '_extracted.txt')
+        
+        return JsonResponse({
+            'success': True,
+            'text': text,
+            'filename': pdf['name']
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+def ocr_text_ajax(request, pdf_id):
+    """AJAX endpoint for OCR text extraction from PDF."""
+    from django.http import JsonResponse
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid method'})
+    
+    pdf = get_pdf_by_id(request, pdf_id)
+    if not pdf:
+        return JsonResponse({'success': False, 'error': 'PDF not found'})
+    
+    try:
+        text = ocr_pdf_to_text(pdf['path'])
+        
+        # Store in session for download
+        request.session['extracted_text'] = text
+        request.session['extracted_filename'] = pdf['name'].replace('.pdf', '_ocr.txt')
+        
+        return JsonResponse({
+            'success': True,
+            'text': text,
+            'filename': pdf['name']
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+def download_text_view(request):
+    """Download extracted text as .txt file."""
+    from django.http import HttpResponse
+    
+    text = request.session.get('extracted_text')
+    filename = request.session.get('extracted_filename', 'extracted.txt')
+    
+    if not text:
+        messages.error(request, 'No text found to download.')
+        return redirect('dashboard')
+    
+    response = HttpResponse(text, content_type='text/plain')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response
 
 
 def delete_pdf_view(request, pdf_id):

@@ -604,6 +604,96 @@ def add_page_numbers(pdf_path, options=None):
         raise Exception(f"Error adding page numbers: {str(e)}")
 
 
+def extract_text_from_pdf(pdf_path):
+    """
+    Extract text from PDF using PyMuPDF (native text extraction).
+    Works best for PDFs with actual text layers.
+    
+    Args:
+        pdf_path: Source PDF absolute path
+    
+    Returns:
+        str: Extracted text from all pages
+    
+    Raises:
+        ValueError: If PDF file doesn't exist
+    """
+    if not os.path.exists(pdf_path):
+        raise ValueError(f"PDF file not found: {pdf_path}")
+    
+    try:
+        doc = fitz.open(pdf_path)
+        text_content = []
+        
+        for page_num, page in enumerate(doc, 1):
+            page_text = page.get_text()
+            if page_text.strip():
+                text_content.append(f"=== Page {page_num} ===\n{page_text}\n")
+        
+        doc.close()
+        
+        if not text_content:
+            return "No text found in PDF. This might be a scanned document - try OCR instead."
+        
+        return "\n".join(text_content)
+        
+    except Exception as e:
+        raise Exception(f"Error extracting text: {str(e)}")
+
+
+def ocr_pdf_to_text(pdf_path):
+    """
+    OCR PDF to text using pytesseract.
+    Converts each page to image, then applies OCR.
+    Best for scanned PDFs or images.
+    
+    Args:
+        pdf_path: Source PDF absolute path
+    
+    Returns:
+        str: OCR-extracted text from all pages
+    
+    Raises:
+        ValueError: If PDF file doesn't exist
+    """
+    if not os.path.exists(pdf_path):
+        raise ValueError(f"PDF file not found: {pdf_path}")
+    
+    try:
+        import pytesseract
+        from PIL import Image
+        import io
+        
+        doc = fitz.open(pdf_path)
+        text_content = []
+        
+        for page_num, page in enumerate(doc, 1):
+            # Convert page to image
+            pix = page.get_pixmap(dpi=300)  # Higher DPI for better OCR
+            img_data = pix.tobytes("png")
+            
+            # Open with PIL
+            img = Image.open(io.BytesIO(img_data))
+            
+            # Perform OCR
+            page_text = pytesseract.image_to_string(img)
+            
+            if page_text.strip():
+                text_content.append(f"=== Page {page_num} ===\n{page_text}\n")
+        
+        doc.close()
+        
+        if not text_content:
+            return "No text could be extracted via OCR. The document might be blank or poor quality."
+        
+        return "\n".join(text_content)
+        
+    except ImportError:
+        raise Exception("pytesseract not installed. Run: pip install pytesseract")
+    except Exception as e:
+        raise Exception(f"Error performing OCR: {str(e)}")
+
+
 def _calculate_position(position, page_width, page_height, content_width, content_height):
     """Calculate x, y coordinates based on position name."""
     positions = {

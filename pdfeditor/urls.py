@@ -26,5 +26,9 @@ urlpatterns = [
     path('page-numbers/', views.page_numbers_view, name='page_numbers'),
     path('page-numbers/result/', views.page_numbers_result_view, name='page_numbers_result'),
     path('download_numbered/', views.download_numbered_view, name='download_numbered'),
+    path('more-tools/', views.more_tools_view, name='more_tools'),
+    path('extract-text/<str:pdf_id>/', views.extract_text_ajax, name='extract_text'),
+    path('ocr-text/<str:pdf_id>/', views.ocr_text_ajax, name='ocr_text'),
+    path('download-text/', views.download_text_view, name='download_text'),
     path('delete-pdf/<str:pdf_id>/', views.delete_pdf_view, name='delete_pdf'),
 ]

@@ -1,0 +1,278 @@
+{% extends 'pdfeditor/base.html' %}
+
+{% block title %}More Tools{% endblock %}
+
+{% block content %}
+<div id="more-tools-modal" style="display: block;">
+    <!-- PDF List View -->
+    <div id="pdf-list-view" style="max-width: 1200px; margin: 3rem auto; padding: 0 1rem;">
+        <div style="background: white; padding: 2rem; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin-bottom: 2rem; text-align: center;">
+            <h2 style="color: #1f2937; margin-bottom: 0.5rem;">🛠️ More Tools</h2>
+            <p style="color: #6b7280; margin: 0;">Select a PDF to access advanced tools</p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;">
+            {% for pdf in uploaded_pdfs %}
+            <div class="pdf-card" data-pdf-id="{{ pdf.id }}" data-pdf-name="{{ pdf.name }}" data-pdf-path="uploads/{{ pdf.name }}" style="background: white; border-radius: 0.75rem; padding: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); cursor: pointer; transition: all 0.2s; border: 2px solid transparent;" onmouseover="this.style.borderColor='#6366f1'; this.style.transform='translateY(-4px)'" onmouseout="this.style.borderColor='transparent'; this.style.transform='translateY(0)'">
+                <div style="display: flex; align-items: start; gap: 1rem;">
+                    <div style="font-size: 2.5rem;">📄</div>
+                    <div style="flex: 1; min-width: 0;">
+                        <h4 style="margin: 0 0 0.5rem 0; color: #1f2937; font-size: 1.1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ pdf.name }}">
+                            {{ pdf.name }}
+                        </h4>
+                        <p style="margin: 0; font-size: 0.875rem; color: #6b7280;">
+                            {{ pdf.size|filesizeformat }}
+                        </p>
+                    </div>
+                </div>
+                <div style="margin-top: 1rem;">
+                    <button class="select-pdf-btn btn btn-primary" style="width: 100%;">
+                        Select & Preview →
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- PDF Preview & Tools View (hidden initially) -->
+    <div id="pdf-tools-view" style="display: none; max-width: 1400px; margin: 0 auto; padding: 2rem 1rem;">
+        <!-- Toolbar -->
+        <div style="background: white; padding: 1rem 2rem; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <button id="back-to-list-btn" class="btn btn-secondary">
+                ← Back to List
+            </button>
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                <button id="extract-text-btn" class="btn btn-primary">
+                    📄 Extract Text
+                </button>
+                <button id="ocr-text-btn" class="btn btn-primary">
+                    🔍 OCR to Text
+                </button>
+            </div>
+        </div>
+
+        <!-- Preview & Results Container -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+            <!-- PDF Preview -->
+            <div style="background: white; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); padding: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3 style="margin: 0; color: #1f2937;">PDF Preview</h3>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <button id="prev-page-btn" class="btn btn-secondary" style="padding: 0.25rem 0.75rem; font-size: 0.875rem;">
+                            ← Prev
+                        </button>
+                        <span id="page-indicator" style="font-size: 0.875rem; color: #6b7280; min-width: 80px; text-align: center;">
+                            Page 1 of 1
+                        </span>
+                        <button id="next-page-btn" class="btn btn-secondary" style="padding: 0.25rem 0.75rem; font-size: 0.875rem;">
+                            Next →
+                        </button>
+                    </div>
+                </div>
+                <div id="pdf-preview-container" style="border: 1px solid #e5e7eb; border-radius: 0.5rem; height: 650px; overflow: auto; display: flex; justify-content: center; align-items: center; background: #f9fafb;">
+                    <canvas id="pdf-canvas"></canvas>
+                </div>
+            </div>
+
+            <!-- Results Panel -->
+            <div style="background: white; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); padding: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3 style="margin: 0; color: #1f2937;">Extracted Text</h3>
+                    <div id="results-actions" style="display: none; gap: 0.5rem;">
+                        <button id="copy-text-btn" class="btn btn-secondary" style="font-size: 0.875rem; padding: 0.5rem 1rem;">
+                            📋 Copy
+                        </button>
+                        <a href="{% url 'download_text' %}" id="download-text-btn" class="btn btn-primary" style="font-size: 0.875rem; padding: 0.5rem 1rem; text-decoration: none;">
+                            📥 Download
+                        </a>
+                    </div>
+                </div>
+                <textarea id="extracted-text-area" readonly style="width: 100%; height: 650px; padding: 1rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-family: monospace; font-size: 0.875rem; resize: none;" placeholder="Click 'Extract Text' or 'OCR to Text' to see results..."></textarea>
+                <div id="loading-indicator" style="display: none; text-align: center; padding: 2rem;">
+                    <div style="font-size: 2rem; margin-bottom: 1rem;">⏳</div>
+                    <p style="color: #6b7280;">Processing... This may take a moment.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+// PDF.js setup
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+let currentPdfId = null;
+let currentPdfPath = null;
+let pdfDoc = null;
+
+// PDF Card Click - Show Preview
+document.querySelectorAll('.pdf-card').forEach(card => {
+    card.addEventListener('click', function() {
+        currentPdfId = this.dataset.pdfId;
+        currentPdfPath = `/media/${this.dataset.pdfPath}`;
+        
+        // Switch views
+        document.getElementById('pdf-list-view').style.display = 'none';
+        document.getElementById('pdf-tools-view').style.display = 'block';
+        
+        // Load PDF preview
+        loadPdfPreview(currentPdfPath);
+    });
+});
+
+// Back to List
+document.getElementById('back-to-list-btn').addEventListener('click', function() {
+    document.getElementById('pdf-tools-view').style.display = 'none';
+    document.getElementById('pdf-list-view').style.display = 'block';
+    document.getElementById('extracted-text-area').value = '';
+    document.getElementById('results-actions').style.display = 'none';
+});
+
+// Extract Text
+document.getElementById('extract-text-btn').addEventListener('click', function() {
+    if (!currentPdfId) return;
+    
+    const textArea = document.getElementById('extracted-text-area');
+    const loading = document.getElementById('loading-indicator');
+    const actions = document.getElementById('results-actions');
+    
+    textArea.style.display = 'none';
+    loading.style.display = 'block';
+    actions.style.display = 'none';
+    
+    fetch(`/extract-text/${currentPdfId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        loading.style.display = 'none';
+        textArea.style.display = 'block';
+        
+        if (data.success) {
+            textArea.value = data.text;
+            actions.style.display = 'flex';
+        } else {
+            textArea.value = `Error: ${data.error}`;
+        }
+    })
+    .catch(error => {
+        loading.style.display = 'none';
+        textArea.style.display = 'block';
+        textArea.value = `Error: ${error.message}`;
+    });
+});
+
+// OCR Text
+document.getElementById('ocr-text-btn').addEventListener('click', function() {
+    if (!currentPdfId) return;
+    
+    const textArea = document.getElementById('extracted-text-area');
+    const loading = document.getElementById('loading-indicator');
+    const actions = document.getElementById('results-actions');
+    
+    textArea.style.display = 'none';
+    loading.style.display = 'block';
+    actions.style.display = 'none';
+    
+    fetch(`/ocr-text/${currentPdfId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        loading.style.display = 'none';
+        textArea.style.display = 'block';
+        
+        if (data.success) {
+            textArea.value = data.text;
+            actions.style.display = 'flex';
+        } else {
+            textArea.value = `Error: ${data.error}`;
+        }
+    })
+    .catch(error => {
+        loading.style.display = 'none';
+        textArea.style.display = 'block';
+        textArea.value = `Error: ${error.message}`;
+    });
+});
+
+// Copy Text
+document.getElementById('copy-text-btn').addEventListener('click', function() {
+    const textArea = document.getElementById('extracted-text-area');
+    textArea.select();
+    document.execCommand('copy');
+    
+    // Visual feedback
+    const btn = this;
+    const original = btn.textContent;
+    btn.textContent = '✅ Copied!';
+    setTimeout(() => btn.textContent = original, 2000);
+});
+
+// Load PDF Preview
+let currentPageNum = 1;
+let totalPages = 0;
+
+function loadPdfPreview(url) {
+    const canvas = document.getElementById('pdf-canvas');
+    const ctx = canvas.getContext('2d');
+    
+    pdfjsLib.getDocument(url).promise.then(function(pdf) {
+        pdfDoc = pdf;
+        totalPages = pdf.numPages;
+        currentPageNum = 1;
+        
+        updatePageIndicator();
+        renderPage(currentPageNum);
+    });
+}
+
+function renderPage(pageNum) {
+    const canvas = document.getElementById('pdf-canvas');
+    const ctx = canvas.getContext('2d');
+    
+    pdfDoc.getPage(pageNum).then(function(page) {
+        const viewport = page.getViewport({scale: 1.5});
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        
+        page.render({
+            canvasContext: ctx,
+            viewport: viewport
+        });
+    });
+}
+
+function updatePageIndicator() {
+    document.getElementById('page-indicator').textContent = `Page ${currentPageNum} of ${totalPages}`;
+    document.getElementById('prev-page-btn').disabled = currentPageNum <= 1;
+    document.getElementById('next-page-btn').disabled = currentPageNum >= totalPages;
+}
+
+// Previous Page
+document.getElementById('prev-page-btn').addEventListener('click', function() {
+    if (currentPageNum <= 1) return;
+    currentPageNum--;
+    renderPage(currentPageNum);
+    updatePageIndicator();
+});
+
+// Next Page
+document.getElementById('next-page-btn').addEventListener('click', function() {
+    if (currentPageNum >= totalPages) return;
+    currentPageNum++;
+    renderPage(currentPageNum);
+    updatePageIndicator();
+});
+</script>
+{% endblock %}
